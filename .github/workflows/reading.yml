@@ -1,0 +1,41 @@
+name: Jyotish Reading
+
+on:
+  push:
+    paths:
+      - "question.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reading:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pyswisseph
+        run: pip install pyswisseph
+
+      - name: Verify engine against reference chart (must pass)
+        run: python tests/test_reference.py
+
+      - name: Generate reading
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python run_reading.py
+
+      - name: Commit reading
+        run: |
+          git config user.name "jyotish-bot"
+          git config user.email "actions@github.com"
+          git add LATEST_READING.md readings/
+          git diff --cached --quiet || git commit -m "New reading"
+          git push
